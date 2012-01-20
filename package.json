@@ -1,0 +1,9 @@
+{
+  "name": "vbscript",
+  "description": "Crazy experiment to make a VB Script parser in js",
+  "main": "./",
+  "version": "0.1.0",
+  "dependencies": {
+    "jison": "0.2.14"
+  }
+}
