@@ -1,0 +1,8 @@
+Function Min(nOne, nTwo)
+  If nOne < nTwo Then
+    Min = nOne
+  Else
+    Min = nTwo
+  End If
+End Function
+
