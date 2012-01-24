@@ -6,3 +6,5 @@ Function Min(nOne, nTwo)
   End If
 End Function
 
+Call Min(4, 0)
+Call Min(4, 8)

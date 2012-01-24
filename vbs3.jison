@@ -6,16 +6,18 @@
 
 \n+         { return 'tNL'; }
 [ \t]+      {/* skip whitespace */}
+"Call"      { return 'tCALL'; }
 "Function"  { return 'tFUNCTION'; }
 "If"        { return 'tIF'; }
 "Then"      { return 'tTHEN'; }
 "Else"      { return 'tELSE'; }
 "End"       { return 'tEND'; }
+"()"        { return 'tEMPTYBRACKETS'; }
 
 [<>\(\)=,]   { return yytext; }
 
 
-\w\w+       { return 'tIdentifier'; }
+\w+       { return 'tIdentifier'; }
 <<EOF>>     return 'tEOF';
 
 /lex
@@ -94,8 +96,8 @@ Statement
     ;
 
 SimpleStatement
-    : MemberExpression ArgumentList_opt     { $$ = new_call_statement($1); ; } /* $1->args=$2 */
-    | tCALL MemberExpression Arguments_opt  { $$ = new_call_statement($2); ; } /* $2->args=$3*/
+    : MemberExpression ArgumentList_opt     { $1.args = $2; $$ = new_call_statement($1, $2, 'ff'); console.log('memberexpression arglist'); } /* $1->args=$2 */
+    | tCALL MemberExpression Arguments_opt  { $2.args = $3; $$ = new_call_statement($1, $2, $3, 'f2'); console.log("call'd function");} /* $2->args=$3*/
     | tIdentifier '=' tIdentifier           { console.log("Assignment"); } /* Humm, hope this doesn't screw everything up */
     | MemberExpression Arguments_opt '=' Expression
                                             { $$ = new_assign_statement($1, $4); ; }
@@ -186,7 +188,7 @@ Else_opt
 
 Arguments_opt
     : EmptyBrackets_opt             { $$ = null; }
-    | '(' ArgumentList ')'          { $$ = $2; }
+    | '(' ArgumentList ')'          { $$ = $2; console.log("has args"); console.log($2); }
     ;
 
 ArgumentList_opt
@@ -195,8 +197,8 @@ ArgumentList_opt
     ;
 
 ArgumentList
-    : Expression                    { $$ = $1; }
-    | Expression ',' ArgumentList   {  $$ = $1; }
+    : Expression                    { $$ = $1; console.log("Arg list yo!"); console.log($1); }
+    | Expression ',' ArgumentList   { $$ = [$1, $3]; }
     ;
 
 EmptyBrackets_opt
@@ -366,6 +368,21 @@ ArgumentDecl
 
 %%
 
+var VBS = {
+  "ast": {},
+
+  "compile": function (code, options) {
+    console.log("going to compile code");
+    // something should probably go here.
+  },
+
+  "print": function () {
+    console.log("Here's the ast so far:");
+    console.log(this.ast);
+  }
+};
+
+
 function parser_error(str) {
   console.log("Parse Error, yo: " + str);
   console.log(arguments);
@@ -374,7 +391,7 @@ function parser_error(str) {
 function parse_complete(prg) {
   console.log("program complete: " + prg);
   console.log(arguments);
-  console.log(this);
+  VBS.print();
 }
 
 function check_error() {
@@ -383,37 +400,89 @@ function check_error() {
 }
 
 function new_function_decl() {
-  console.log("new function decl");
+  console.log('FUNCTION: new_function_decl');
   console.log(arguments);
 }
 
 function new_function_statement() {
-  console.log("new function statements");
+  console.log('FUNCTION: new_function_statement');
   console.log(arguments);
 }
 
 function new_argument_decl(name, by_ref) {
+  console.log('FUNCTION: new_argument_decl');
   console.log("function parameter: " + name);
   console.log(arguments);
 }
 
-
 function new_member_expression(obj_expr, identifier) {
-  console.log("new member expression.. object: " + obj_expr + " ident: " + identifier);
+  console.log('FUNCTION: new_member_expression');
   console.log(arguments);
+  return {"obj_expr": obj_expr, "identifier": identifier, "args": []};
 }
 
 function new_binary_expression(x, y, z) {
+  console.log('FUNCTION: new_binary_expression !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
   console.log(arguments);
 }
 
 function source_add_statement(stat) {
-    console.log(stat);
+  console.log('FUNCTION: source_add_statement');
   console.log(arguments);
 }
 
 function new_if_statement() {
-  console.log("New if statement");
+  console.log("FUNCTION: new_if_statement");
   console.log(arguments);
 }
 
+function new_call_statement() {
+  /*
+  console.log("FUNCTION: new_call_statement");
+  console.log("----------");
+  console.log(arguments[1]);
+  console.log(arguments);
+  */
+  NS[arguments[1].identifier].apply(NS, arg_list(arguments[1].args));
+}
+
+function deep_flatten(array) {
+  var ret = [];
+  function inner_flatten(a2) {
+    if (!a2.length) {
+      ret.push(a2);
+    } else {
+      for (var i=0; i<a2.length; i++) {
+        if (!a2[i].length) {
+          ret.push(a2[i]);
+        } else {
+          inner_flatten(a2[i]);
+        }
+      }
+    }
+  }
+
+  inner_flatten(array);
+  return ret;
+}
+
+function arg_list(_args) {
+  args = deep_flatten(_args);
+  var ret = [];
+  for (var i=0; i<args.length; i++) {
+    if (args[i].hasOwnProperty('identifier')) {
+      ret.push(args[i].identifier);
+    } else {
+      console.log("WTF");
+    }
+  }
+
+  return ret;
+}
+
+var NS = {
+ "Min":  function () {
+    console.log("@@@@@@@@@@@@@@@@@ called with ");
+    console.log(arguments);
+ }
+}

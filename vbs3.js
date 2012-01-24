@@ -39,9 +39,9 @@ case 15: this.$ = $$[$0-2];
 break;
 case 16: this.$ = $$[$0-1]; 
 break;
-case 17: this.$ = new_call_statement($$[$0-1]); ; 
+case 17: $$[$0-1].args = $$[$0]; this.$ = new_call_statement($$[$0-1], $$[$0], 'ff'); console.log('memberexpression arglist'); 
 break;
-case 18: this.$ = new_call_statement($$[$0-1]); ; 
+case 18: $$[$0-1].args = $$[$0]; this.$ = new_call_statement($$[$0-2], $$[$0-1], $$[$0], 'f2'); console.log("call'd function");
 break;
 case 19: console.log("Assignment"); 
 break;
@@ -129,15 +129,15 @@ case 59: this.$ = $$[$0];
 break;
 case 60: this.$ = null; 
 break;
-case 61: this.$ = $$[$0-1]; 
+case 61: this.$ = $$[$0-1]; console.log("has args"); console.log($$[$0-1]); 
 break;
 case 62: this.$ = null; 
 break;
 case 63: this.$ = $$[$0]; 
 break;
-case 64: this.$ = $$[$0]; 
+case 64: this.$ = $$[$0]; console.log("Arg list yo!"); console.log($$[$0]); 
 break;
-case 65:  this.$ = $$[$0-2]; 
+case 65: this.$ = [$$[$0-2], $$[$0]]; 
 break;
 case 68: this.$ = $$[$0]; 
 break;
@@ -480,6 +480,21 @@ parse: function parse(input) {
 }};
 
 
+var VBS = {
+  "ast": {},
+
+  "compile": function (code, options) {
+    console.log("going to compile code");
+    // something should probably go here.
+  },
+
+  "print": function () {
+    console.log("Here's the ast so far:");
+    console.log(this.ast);
+  }
+};
+
+
 function parser_error(str) {
   console.log("Parse Error, yo: " + str);
   console.log(arguments);
@@ -488,7 +503,7 @@ function parser_error(str) {
 function parse_complete(prg) {
   console.log("program complete: " + prg);
   console.log(arguments);
-  console.log(this);
+  VBS.print();
 }
 
 function check_error() {
@@ -497,40 +512,92 @@ function check_error() {
 }
 
 function new_function_decl() {
-  console.log("new function decl");
+  console.log('FUNCTION: new_function_decl');
   console.log(arguments);
 }
 
 function new_function_statement() {
-  console.log("new function statements");
+  console.log('FUNCTION: new_function_statement');
   console.log(arguments);
 }
 
 function new_argument_decl(name, by_ref) {
+  console.log('FUNCTION: new_argument_decl');
   console.log("function parameter: " + name);
   console.log(arguments);
 }
 
-
 function new_member_expression(obj_expr, identifier) {
-  console.log("new member expression.. object: " + obj_expr + " ident: " + identifier);
+  console.log('FUNCTION: new_member_expression');
   console.log(arguments);
+  return {"obj_expr": obj_expr, "identifier": identifier, "args": []};
 }
 
 function new_binary_expression(x, y, z) {
+  console.log('FUNCTION: new_binary_expression !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
   console.log(arguments);
 }
 
 function source_add_statement(stat) {
-    console.log(stat);
+  console.log('FUNCTION: source_add_statement');
   console.log(arguments);
 }
 
 function new_if_statement() {
-  console.log("New if statement");
+  console.log("FUNCTION: new_if_statement");
   console.log(arguments);
 }
 
+function new_call_statement() {
+  /*
+  console.log("FUNCTION: new_call_statement");
+  console.log("----------");
+  console.log(arguments[1]);
+  console.log(arguments);
+  */
+  NS[arguments[1].identifier].apply(NS, arg_list(arguments[1].args));
+}
+
+function deep_flatten(array) {
+  var ret = [];
+  function inner_flatten(a2) {
+    if (!a2.length) {
+      ret.push(a2);
+    } else {
+      for (var i=0; i<a2.length; i++) {
+        if (!a2[i].length) {
+          ret.push(a2[i]);
+        } else {
+          inner_flatten(a2[i]);
+        }
+      }
+    }
+  }
+
+  inner_flatten(array);
+  return ret;
+}
+
+function arg_list(_args) {
+  args = deep_flatten(_args);
+  var ret = [];
+  for (var i=0; i<args.length; i++) {
+    if (args[i].hasOwnProperty('identifier')) {
+      ret.push(args[i].identifier);
+    } else {
+      console.log("WTF");
+    }
+  }
+
+  return ret;
+}
+
+var NS = {
+ "Min":  function () {
+    console.log("@@@@@@@@@@@@@@@@@ called with ");
+    console.log(arguments);
+ }
+}
 /* Jison generated lexer */
 var lexer = (function(){
 var lexer = ({EOF:1,
@@ -666,26 +733,30 @@ case 0: return 9;
 break;
 case 1:/* skip whitespace */
 break;
-case 2: return 35; 
+case 2: return 19; 
 break;
-case 3: return 59; 
+case 3: return 35; 
 break;
-case 4: return 60; 
+case 4: return 59; 
 break;
-case 5: return 64; 
+case 5: return 60; 
 break;
-case 6: return 63; 
+case 6: return 64; 
 break;
-case 7: return yy_.yytext; 
+case 7: return 63; 
 break;
-case 8: return 21; 
+case 8: return 72; 
 break;
-case 9:return 6;
+case 9: return yy_.yytext; 
+break;
+case 10: return 21; 
+break;
+case 11:return 6;
 break;
 }
 };
-lexer.rules = [/^\n+/,/^[ \t]+/,/^Function\b/,/^If\b/,/^Then\b/,/^Else\b/,/^End\b/,/^[<>\(\)=,]/,/^\w\w+/,/^$/];
-lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9],"inclusive":true}};
+lexer.rules = [/^\n+/,/^[ \t]+/,/^Call\b/,/^Function\b/,/^If\b/,/^Then\b/,/^Else\b/,/^End\b/,/^\(\)/,/^[<>\(\)=,]/,/^\w+/,/^$/];
+lexer.conditions = {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11],"inclusive":true}};
 return lexer;})()
 parser.lexer = lexer;
 return parser;
