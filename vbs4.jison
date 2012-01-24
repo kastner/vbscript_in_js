@@ -23,37 +23,101 @@
 
 /lex
 
+%left '.'
+
+%left '^'
+%left '*' '/'
+%left '\\\\'
+%left MOD
+%left '+' '-'
+%left '&'
+
+%left COMPARISON '<>' '<' '>' '<=' '>=' IS
+
+%left NOT
+%left AND
+%left OR
+%left XOR
+%left EQV
+%left IMP
+
+%left '(' ')' ','
+
+%left '='
+
+%left TO IN STEP
+%left ELSEIF ELSE
+%left ':'
+%left NEWLINE fake_newline
+
+
+%start program
 
 %%
 
 program
-  : statement_list EOF        { return ['Program', {}].concat($1); }
+  : statement_list EOF        { return { type:'Program', body: $1 }; }
   ;
 
 statement_list
-  : statement NEWLINE                   { $$ = $1; }
-  | statement NEWLINE statement_list    { $$ = $1; }
+  : statement NEWLINE
+    { $$ = [$1] }
+  | statement NEWLINE statement_list
+    { $1.push($3); $$ = $1; }
   ;
 
 statement
-  : IDENTIFER                           { $$ = $1; }
-  | function                            { $$ = $1; }
+  : IDENTIFIER
+  | function
+  | if_statement
+  | if_else_statement
+  | assignment
+  | call_statement
   ;
 
 function
-  : FUNCTION IDENTIFIER arguments NEWLINE statement_list END FUNCTION { $$ = $1; console.log($0, $1, $2, $3, $4); }
+  : FUNCTION IDENTIFIER arguments NEWLINE statement_list END FUNCTION 
+    { 
+      console.log($0, $1, $2, $3, $4);
+      $$ = $5; 
+    }
+  ;
+
+if_statement
+  : IF IDENTIFIER '<' IDENTIFIER THEN NEWLINE statement_list END IF
+  ;
+
+if_else_statement
+  : IF IDENTIFIER '<' IDENTIFIER THEN NEWLINE statement_list ELSE NEWLINE statement_list END IF
+  ;
+
+call_statement
+  : CALL IDENTIFIER arguments
+    { $$ = { type: 'Call', name: $2, arguments: $3 }; }
+  ;
+
+assignment
+  : IDENTIFIER '=' IDENTIFIER
   ;
 
 arguments
-  : EMPTYBRACKETS { $$ = $1; }
-  | '(' argument_list ')' { $$ = $1; }
+  : EMPTYBRACKETS
+  | '(' argument_list ')' 
+    { $$ = $2; }
   ;
 
 argument_list
-  : argument { $$ = $1; }
+  : /* can be empty */
+    { $$ = []; }
+  | argument 
+    { $$ = [$1]; console.log("in here");}
+  | argument_list ',' argument
+    { $$ = $1.concat($3); }
   ;
 
+/* optional args? */
 argument
-  : statement { $$ = $1; }
+  : statement
+    { $$ = {type: 'Argument', value: $1 }; }
   ;
 
