@@ -1,3 +1,4 @@
+Call Min(4,8)
 Function Min(nOne, nTwo)
   If nOne < nTwo Then
     Min = nOne
@@ -6,5 +7,4 @@ Function Min(nOne, nTwo)
   End If
 End Function
 
-Call Min(4, 0)
-Call Min(4, 8)
+call Min(14,8)

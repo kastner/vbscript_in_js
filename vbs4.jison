@@ -6,6 +6,7 @@
 \n+         { return 'NEWLINE'; }
 [ \t]+      { /* skip whitespace */ }
 "Call"      { return 'CALL'; }
+"call"      { return 'CALL'; } /* how do we do case insensitive? */
 "Function"  { return 'FUNCTION'; }
 "If"        { return 'IF'; }
 "Then"      { return 'THEN'; }
@@ -55,15 +56,34 @@
 
 %%
 
+/* does this mean a program must end with a newline? */
 program
   : statement_list EOF        { return { type:'Program', body: $1 }; }
   ;
 
 statement_list
+  : statement_line
+    { $$ = [$statement_line]; }
+  | statement_list statement_line
+    { 
+      if ($statement_list['push']) {
+        console.log("good");
+        $statement_list.push($statement_line);
+        $$ = $statement_list;
+      } else {
+        console.log("So... statement_list isn't cool... let's see what it is");
+        console.log($statement_list);
+        //console.log($statement_line);
+        var tmp = [$statement_list];
+        tmp.push($statement_line);
+        $$ = tmp;
+      }
+    //$$ = $1.concat($3); 
+    }
+  ;
+
+statement_line
   : statement NEWLINE
-    { $$ = [$1] }
-  | statement NEWLINE statement_list
-    { $1.push($3); $$ = $1; }
   ;
 
 statement
@@ -77,23 +97,35 @@ statement
 
 function
   : FUNCTION IDENTIFIER arguments NEWLINE statement_list END FUNCTION 
-    { 
-      console.log($0, $1, $2, $3, $4);
-      $$ = $5; 
-    }
+    { $$ = { type: 'Function', name: $2, arguments: $3, body: $5 }; }
   ;
 
 if_statement
-  : IF IDENTIFIER '<' IDENTIFIER THEN NEWLINE statement_list END IF
+  : IF conditional THEN NEWLINE statement_list END IF
+    { $$ = { type: 'If', condition: $conditional, if_body: $statement_list}; }
   ;
 
 if_else_statement
-  : IF IDENTIFIER '<' IDENTIFIER THEN NEWLINE statement_list ELSE NEWLINE statement_list END IF
+  : IF conditional THEN NEWLINE statement_list ELSE NEWLINE statement_list END IF
+    { $$ = { type: 'IfElse', condition: $conditional, if_body: $statement_list1, else_body: $statement_list2}; }
+  ;
+
+conditional
+  : IDENTIFIER compare IDENTIFIER
+    { $$ = { type: 'Conditional', first: $1, second: $3, compare: $2}; }
+  ;
+
+compare
+  : '>'
+  | '<'
+  | '>='
+  | '<='
+  | '='
   ;
 
 call_statement
   : CALL IDENTIFIER arguments
-    { $$ = { type: 'Call', name: $2, arguments: $3 }; }
+    { $$ = { type: 'Call', name: $IDENTIFIER, arguments: $arguments }; }
   ;
 
 assignment
@@ -110,7 +142,7 @@ argument_list
   : /* can be empty */
     { $$ = []; }
   | argument 
-    { $$ = [$1]; console.log("in here");}
+    { $$ = [$1]; }
   | argument_list ',' argument
     { $$ = $1.concat($3); }
   ;

@@ -1,6 +1,5 @@
 /* VBScript */
 
-%start Program
 %lex
 %%
 
@@ -18,48 +17,14 @@
 
 
 \w+       { return 'tIdentifier'; }
-<<EOF>>     return 'tEOF';
+<<EOF>>     return 'EOF';
 
 /lex
 
 %%
 
-
-%token tEOF tNL tREM tEMPTYBRACKETS
-%token tTRUE tFALSE
-%token tNOT tAND tOR tXOR tEQV tIMP tNEQ
-%token tIS tLTEQ tGTEQ tMOD
-%token tCALL tDIM tSUB tFUNCTION tPROPERTY tGET tLET tCONST
-%token tIF tELSE tELSEIF tEND tTHEN tEXIT
-%token tWHILE tWEND tDO tLOOP tUNTIL tFOR tTO tSTEP tEACH tIN
-%token tBYREF tBYVAL
-%token tOPTION tEXPLICIT
-%token tSTOP
-%token tNOTHING tEMPTY tnull
-%token tCLASS tSET tNEW tPUBLIC tPRIVATE tDEFAULT tME
-%token tERROR tNEXT tON tRESUME tGOTO
-%token <string> tIdentifier tString
-%token <lng> tLong tShort
-%token <dbl> tDouble
-
-%type <statement> Statement SimpleStatement StatementNl StatementsNl StatementsNl_opt IfStatement Else_opt
-%type <expression> Expression LiteralExpression PrimaryExpression EqualityExpression CallExpression
-%type <expression> ConcatExpression AdditiveExpression ModExpression IntdivExpression MultiplicativeExpression ExpExpression
-%type <expression> NotExpression UnaryExpression AndExpression OrExpression XorExpression EqvExpression
-%type <member> MemberExpression
-%type <expression> Arguments_opt ArgumentList_opt ArgumentList Step_opt
-%type <bool> OptionExplicit_opt DoType
-%type <arg_decl> ArgumentsDecl_opt ArgumentDeclList ArgumentDecl
-%type <func_decl> FunctionDecl PropertyDecl
-%type <elseif> ElseIfs_opt ElseIfs ElseIf
-%type <class_decl> ClassDeclaration ClassBody
-%type <uint> Storage Storage_opt
-%type <dim_decl> DimDeclList
-%type <const_decl> ConstDecl ConstDeclList
-
-
-Program
-    : OptionExplicit_opt SourceElements tEOF    { parse_complete($1); }
+program
+    : OptionExplicit_opt SourceElements EOF    { return ['Program', {}].concat($2); }
     ;
 
 OptionExplicit_opt
@@ -69,13 +34,13 @@ OptionExplicit_opt
 
 SourceElements
     : /* empty */
-    | SourceElements StatementNl            { source_add_statement($2); }
+    | SourceElements StatementNl            { $$ = [$1, $2]; }
     | SourceElements ClassDeclaration       { source_add_class($2); }
     ;
 
 StatementsNl_opt
     : /* empty */                           { $$ = null; }
-    | StatementsNl                          { $$ = $1; }
+    | StatementsNl                          { $$ = [$1]; }
     ;
 
 StatementsNl
@@ -89,16 +54,16 @@ StatementNl
 
 Statement
     : ':'                                   { $$ = null; }
-    | ':' Statement                         { $$ = $2; }
-    | SimpleStatement                       { $$ = $1; }
-    | SimpleStatement ':' Statement         { $$ = $1; } /* $1->next=$3 */
-    | SimpleStatement ':'                   { $$ = $1; }
+    | ':' Statement                         { $$ = [$2]; }
+    | SimpleStatement                       { $$ = [$1]; console.log($1); }
+    | SimpleStatement ':' Statement         { $1.push($3); $$ = $1; }
+    | SimpleStatement ':'                   { $$ = [$1]; }
     ;
 
 SimpleStatement
-    : MemberExpression ArgumentList_opt     { $1.args = $2; $$ = new_call_statement($1, $2, 'ff'); console.log('memberexpression arglist'); } /* $1->args=$2 */
-    | tCALL MemberExpression Arguments_opt  { $2.args = $3; $$ = new_call_statement($1, $2, $3, 'f2'); console.log("call'd function");} /* $2->args=$3*/
-    | tIdentifier '=' tIdentifier           { console.log("Assignment"); } /* Humm, hope this doesn't screw everything up */
+    : MemberExpression ArgumentList_opt     { $1.args = $2; $$ = new_call_statement($1, $2, 'ff'); } /* $1->args=$2 */
+    | tCALL MemberExpression Arguments_opt  { $2.args = $3; $$ = new_call_statement($1, $2, $3, 'f2'); } /* $2->args=$3*/
+    | tIdentifier '=' tIdentifier           {  } /* Humm, hope this doesn't screw everything up */
     | MemberExpression Arguments_opt '=' Expression
                                             { $$ = new_assign_statement($1, $4); ; }
     | tDIM DimDeclList                      { $$ = new_dim_statement($2); ; }
@@ -111,7 +76,9 @@ SimpleStatement
     | tDO tNL StatementsNl_opt tLOOP DoType Expression
                                             { $$ = new_while_statement($5 ? STAT_DOWHILE : STAT_DOUNTIL, $6, $3);
                                               ; }
-    | FunctionDecl                          { $$ = new_function_statement($1); ; }
+    | FunctionDecl                          { $$ = ['FunctionDecl', {name: $1}]; }
+    | yFunctionDecl                          { $$ = ['FunctionDecl', {name: yytext}]; }
+    | xFunctionDecl                          { $$ = new_function_statement($1); ; }
     | tEXIT tDO                             { $$ = new_statement(STAT_EXITDO, 0); ; }
     | tEXIT tFOR                            { $$ = new_statement(STAT_EXITFOR, 0); ; }
     | tEXIT tFUNCTION                       { $$ = new_statement(STAT_EXITFUNC, 0); ; }
@@ -188,7 +155,7 @@ Else_opt
 
 Arguments_opt
     : EmptyBrackets_opt             { $$ = null; }
-    | '(' ArgumentList ')'          { $$ = $2; console.log("has args"); console.log($2); }
+    | '(' ArgumentList ')'          { $$ = $2; }
     ;
 
 ArgumentList_opt
@@ -197,7 +164,7 @@ ArgumentList_opt
     ;
 
 ArgumentList
-    : Expression                    { $$ = $1; console.log("Arg list yo!"); console.log($1); }
+    : Expression                    { $$ = $1; }
     | Expression ',' ArgumentList   { $$ = [$1, $3]; }
     ;
 
@@ -334,9 +301,9 @@ PropertyDecl
 
 FunctionDecl
     : Storage_opt tSUB tIdentifier ArgumentsDecl_opt tNL StatementsNl_opt tEND tSUB
-                                    { $$ = new_function_decl($3, 'sub', $1, $4, $6); check_error(); }
+                                    { $$ = $x = new_function_decl($3, 'sub', $1, $4, $6); check_error(); }
     | Storage_opt tFUNCTION tIdentifier ArgumentsDecl_opt tNL StatementsNl_opt tEND tFUNCTION
-                                    { $$ = new_function_decl($3, 'function', $1, $4, $6); check_error(); }
+                                    { $$ = ['FunctionDecl', {name: $1, args: $4, body: $6}]; $x = new_function_decl($3, 'function', $1, $4, $6); check_error(); }
     ;
 
 Storage_opt
@@ -372,13 +339,10 @@ var VBS = {
   "ast": {},
 
   "compile": function (code, options) {
-    console.log("going to compile code");
     // something should probably go here.
   },
 
   "print": function () {
-    console.log("Here's the ast so far:");
-    console.log(this.ast);
   }
 };
 
@@ -389,51 +353,51 @@ function parser_error(str) {
 }
 
 function parse_complete(prg) {
-  console.log("program complete: " + prg);
-  console.log(arguments);
-  VBS.print();
+  //console.log("program complete: " + prg);
+  //console.log(arguments);
+  //VBS.print();
 }
 
 function check_error() {
-  console.log("check for errors");
-  console.log(arguments);
+  //console.log("check for errors");
+  //console.log(arguments);
 }
 
 function new_function_decl() {
-  console.log('FUNCTION: new_function_decl');
-  console.log(arguments);
+  //console.log('FUNCTION: new_function_decl');
+  //console.log(arguments);
 }
 
 function new_function_statement() {
-  console.log('FUNCTION: new_function_statement');
-  console.log(arguments);
+  //console.log('FUNCTION: new_function_statement');
+  //console.log(arguments);
 }
 
 function new_argument_decl(name, by_ref) {
-  console.log('FUNCTION: new_argument_decl');
-  console.log("function parameter: " + name);
-  console.log(arguments);
+  //console.log('FUNCTION: new_argument_decl');
+  //console.log("function parameter: " + name);
+  //console.log(arguments);
 }
 
 function new_member_expression(obj_expr, identifier) {
-  console.log('FUNCTION: new_member_expression');
-  console.log(arguments);
+  //console.log('FUNCTION: new_member_expression');
+  //console.log(arguments);
   return {"obj_expr": obj_expr, "identifier": identifier, "args": []};
 }
 
 function new_binary_expression(x, y, z) {
-  console.log('FUNCTION: new_binary_expression !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-  console.log(arguments);
+  //console.log('FUNCTION: new_binary_expression !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  //console.log(arguments);
 }
 
 function source_add_statement(stat) {
-  console.log('FUNCTION: source_add_statement');
-  console.log(arguments);
+  //console.log('FUNCTION: source_add_statement');
+  //console.log(arguments);
 }
 
 function new_if_statement() {
-  console.log("FUNCTION: new_if_statement");
-  console.log(arguments);
+  //console.log("FUNCTION: new_if_statement");
+  //console.log(arguments);
 }
 
 function new_call_statement() {
@@ -482,7 +446,7 @@ function arg_list(_args) {
 
 var NS = {
  "Min":  function () {
-    console.log("@@@@@@@@@@@@@@@@@ called with ");
-    console.log(arguments);
+    //console.log("@@@@@@@@@@@@@@@@@ called with ");
+    //console.log(arguments);
  }
 }
