@@ -67,7 +67,6 @@ statement_list
   | statement_list statement_line
     { 
       if ($statement_list['push']) {
-        console.log("good");
         $statement_list.push($statement_line);
         $$ = $statement_list;
       } else {
@@ -97,17 +96,17 @@ statement
 
 function
   : FUNCTION IDENTIFIER arguments NEWLINE statement_list END FUNCTION 
-    { $$ = { type: 'Function', name: $2, arguments: $3, body: $5 }; }
+    { $$ = { type: 'Function', name: $IDENTIFIER, arguments: $arguments, body: $statement_list }; }
   ;
 
 if_statement
   : IF conditional THEN NEWLINE statement_list END IF
-    { $$ = { type: 'If', condition: $conditional, if_body: $statement_list}; }
+    { $$ = { type: 'If', condition: $conditional, body: $statement_list}; }
   ;
 
 if_else_statement
   : IF conditional THEN NEWLINE statement_list ELSE NEWLINE statement_list END IF
-    { $$ = { type: 'IfElse', condition: $conditional, if_body: $statement_list1, else_body: $statement_list2}; }
+    { $$ = { type: 'IfElse', condition: $conditional, body: $statement_list1, else_body: $statement_list2}; }
   ;
 
 conditional
@@ -130,6 +129,7 @@ call_statement
 
 assignment
   : IDENTIFIER '=' IDENTIFIER
+    { $$ = { type: 'Assignment', name: $IDENTIFIER1, value: $IDENTIFIER2}; }
   ;
 
 arguments
