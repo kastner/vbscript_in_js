@@ -5,6 +5,7 @@
   <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
   <script src="https://raw.github.com/kastner/vbscript_in_js/master/vbs4.js"></script>
+  <script src="https://raw.github.com/kastner/vbscript_in_js/master/compiler.js"></script>
 
   <style type="text/css">
     #try div {
@@ -48,11 +49,15 @@
         </div>
 
         <div>
-          <button class="btn" id="go">Convert</button>
+          <button class="btn" id="go">Compile</button>
         </div>
 
         <div>
           <textarea id='javascript'></textarea>
+        </div>
+
+        <div>
+          <button class="btn" id="eval">Evaluate JS</button>
         </div>
       </section>
     </div>
@@ -71,7 +76,12 @@
     });
 
     $("#go").live("click", function () {
+      $("#javascript").val(compiler.compile($("#vbscript").val(), vbs4));
     });
+
+    $("#eval").live("click", function () {
+      alert(eval($("#javascript").val()));
+    })
   </script>
 </body>
 </html>
