@@ -6,6 +6,7 @@ The output is also JavaScript.
 
 It's far from compelete, but it does compile the `.vbs` files.
 
+View the live demo: [kastner.github.com/vbscript_in_js/](http://kastner.github.com/vbscript_in_js/)
 
 How
 ---
