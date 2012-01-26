@@ -3,24 +3,28 @@
 %lex
 %%
 
-\n+         { return 'NEWLINE'; }
-[ \t]+      { /* skip whitespace */ }
-"Call"      { return 'CALL'; }
-"call"      { return 'CALL'; } /* how do we do case insensitive? */
-"Function"  { return 'FUNCTION'; }
-"If"        { return 'IF'; }
-"Then"      { return 'THEN'; }
-"Else"      { return 'ELSE'; }
-"End"       { return 'END'; }
-"MOD"       { return yytext; }
-"()"        { return 'EMPTYBRACKETS'; }
+\n+                 { return 'NEWLINE'; }
+[ \t]+              { /* skip whitespace */ }
+"Call"              { return 'CALL'; }
+"call"              { return 'CALL'; } /* how do we do case insensitive? */
+"Function"          { return 'FUNCTION'; }
+"Sub"               { return 'SUB'; }
+"If"                { return 'IF'; }
+"Then"              { return 'THEN'; }
+"Else"              { return 'ELSE'; }
+"Is"                { return 'IS'; }
+"End"               { return 'END'; }
+"Set"               { return 'SET'; }
+"MOD"               { return yytext; }
+L?\"(\\.|[^\\"])*\" { return 'STRING'; }  /* taken from ansi C yacc file */
+"()"                { return 'EMPTYBRACKETS'; }
 
-[<>\(\)=,]  { return yytext; }
+[<>\(\)=,\.]        { return yytext; }
 
 
-\w+         { return 'IDENTIFIER'; }
+\w+                 { return 'IDENTIFIER'; }
 
-<<EOF>>     { return 'EOF'; }
+<<EOF>>             { return 'EOF'; }
 
 /lex
 
@@ -86,7 +90,7 @@ statement_line
   ;
 
 statement
-  : IDENTIFIER
+  : STRING
   | function
   | if_statement
   | if_else_statement
@@ -95,8 +99,13 @@ statement
   ;
 
 function
-  : FUNCTION IDENTIFIER arguments NEWLINE statement_list END FUNCTION 
-    { $$ = { type: 'Function', name: $IDENTIFIER, arguments: $arguments, body: $statement_list }; }
+  : function_or_sub member_access arguments NEWLINE statement_list END function_or_sub
+    { $$ = { type: 'Function', name: $member_access, arguments: $arguments, body: $statement_list }; }
+  ;
+
+function_or_sub
+  : FUNCTION
+  | SUB
   ;
 
 if_statement
@@ -110,8 +119,14 @@ if_else_statement
   ;
 
 conditional
-  : IDENTIFIER compare IDENTIFIER
-    { $$ = { type: 'Conditional', first: $1, second: $3, compare: $2}; }
+  : comparable compare comparable
+    { $$ = { type: 'Conditional', first: $comparable1, second: $comparable2, compare: $compare}; }
+  ;
+
+comparable
+  : member_access
+  | call_statement
+  | STRING
   ;
 
 compare
@@ -120,16 +135,31 @@ compare
   | '>='
   | '<='
   | '='
+  | 'IS'
   ;
 
 call_statement
-  : CALL IDENTIFIER arguments
-    { $$ = { type: 'Call', name: $IDENTIFIER, arguments: $arguments }; }
+  : member_access arguments
+    { $$ = { type: 'Call', name: $member_access, arguments: $arguments }; }
+  | CALL member_access arguments
+    { $$ = { type: 'Call', name: $member_access, arguments: $arguments }; }
+  ;
+
+member_access
+  : member_access '.' IDENTIFIER
+  | IDENTIFIER
+  ;
+
+member_access_or_string
+  : member_access
+  | STRING
   ;
 
 assignment
-  : IDENTIFIER '=' IDENTIFIER
-    { $$ = { type: 'Assignment', name: $IDENTIFIER1, value: $IDENTIFIER2}; }
+  : SET member_access '=' member_access_or_string
+    { $$ = { type: 'Assignment', name: $member_access, value: $member_access_or_string }; }
+  | member_access '=' member_access_or_string
+    { $$ = { type: 'Assignment', name: $member_access, value: $member_access_or_string }; }
   ;
 
 arguments
@@ -149,7 +179,9 @@ argument_list
 
 /* optional args? */
 argument
-  : statement
+  : IDENTIFIER
+    { $$ = {type: 'Argument', value: $1 }; }
+  | STRING
     { $$ = {type: 'Argument', value: $1 }; }
   ;
 
