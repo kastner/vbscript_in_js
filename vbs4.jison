@@ -16,6 +16,7 @@
 "End"               { return 'END'; }
 "Set"               { return 'SET'; }
 "MOD"               { return yytext; }
+"Nothing"           { yytext = 'null'; return 'IDENTIFIER'; }
 L?\"(\\.|[^\\"])*\" { return 'STRING'; }  /* taken from ansi C yacc file */
 "()"                { return 'EMPTYBRACKETS'; }
 
@@ -100,7 +101,7 @@ statement
 
 function
   : function_or_sub member_access arguments NEWLINE statement_list END function_or_sub
-    { $$ = { type: 'Function', name: $member_access, arguments: $arguments, body: $statement_list }; }
+    { $$ = { type: 'Function', sub_type: $function_or_sub, name: $member_access, arguments: $arguments, body: $statement_list }; }
   ;
 
 function_or_sub
@@ -115,7 +116,7 @@ if_statement
 
 if_else_statement
   : IF conditional THEN NEWLINE statement_list ELSE NEWLINE statement_list END IF
-    { $$ = { type: 'IfElse', condition: $conditional, body: $statement_list1, else_body: $statement_list2}; }
+    { $$ = { type: 'If', condition: $conditional, body: $statement_list1, else_body: $statement_list2}; }
   ;
 
 conditional
@@ -125,8 +126,10 @@ conditional
 
 comparable
   : member_access
+    { $$ = { type: 'Call', blah: "fooo", name: $member_access, arguments: null}; }
   | call_statement
   | STRING
+    { $$ = { type: 'String', value: $STRING }; }
   ;
 
 compare
@@ -136,17 +139,19 @@ compare
   | '<='
   | '='
   | 'IS'
+    { $$ = '=='; }
   ;
 
 call_statement
   : member_access arguments
     { $$ = { type: 'Call', name: $member_access, arguments: $arguments }; }
   | CALL member_access arguments
-    { $$ = { type: 'Call', name: $member_access, arguments: $arguments }; }
+    { $$ = { type: 'Call', bare_call: true, name: $member_access, arguments: $arguments }; }
   ;
 
 member_access
   : member_access '.' IDENTIFIER
+    { $$ = $member_access + "." + $IDENTIFIER; }
   | IDENTIFIER
   ;
 

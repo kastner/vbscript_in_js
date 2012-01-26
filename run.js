@@ -10,7 +10,7 @@ var Node = function (_node) {
   var self = this;
   self.node = _node;
 
-  self.compile = function () {
+  self.compile = function (opts) {
     throw "Not implemented (node type: " + self.node.type + ")";
   }
 
@@ -18,8 +18,12 @@ var Node = function (_node) {
     return this.node.type;
   }
 
-  self.compileChildren = function (childKind) {
-    var children = this.node[childKind].map(function (node) { return (new Node(node)).compile(); });
+  self.compileChildren = function (childKind, opts) {
+    opts.indent += 1;
+    var children = this.node[childKind].map(function (node) { 
+      return indent(opts.indent) + (new Node(node)).compile(opts);
+    });
+    opts.indent -= 1;
     return children;
   }
 
@@ -32,63 +36,89 @@ var Node = function (_node) {
 
 var Nodes = {
   "Call": function (self) {
-    self.compile = function () {
-      var args = self.node.arguments.map(function (argument) { var a = new Node(argument); return a.compile(); });
-      return "VBS['" + self.node.name+ "'](" + args.join(",") + ");";
+    self.compile = function (opts) {
+      var ret = "";
+      if (self.node.arguments) {
+        var args = self.node.arguments.map(function (argument) { var a = new Node(argument); return a.compile(opts); });
+        ret = self.node.name + "(" + args.join(",") + ")";
+      } else {
+        ret = self.node.name;
+      }
+
+      if (self.node.bare_call) {
+        ret += ";";
+      }
+      return ret;
     }
     return self;
   },
 
   "Conditional": function (self) {
-    self.compile = function () {
-      return "(" + self.node.first + " " + self.node.compare + " " + self.node.second + ")";
+    self.compile = function (opts) {
+      var first = (new Node(self.node.first)).compile(opts);
+      var second = (new Node(self.node.second)).compile(opts);
+      return "(" + first + " " + self.node.compare + " " + second + ")";
     }
   },
 
-  "IfElse": function (self) {
-    self.compile = function () {
-      var body = self.compileChildren.apply(self, ['body']);
-      var else_body = self.compileChildren.apply(self, ['else_body']);
-      var conditional = (new Node(self.node.condition)).compile();
-      return [
-        "if " + conditional + " {",
-        "  " + body,
-        "} else {",
-        "  " + else_body,
-        "}"
-      ].join("\n");
+  "If": function (self) {
+    self.compile = function (opts) {
+      var body = self.compileChildren.apply(self, ['body', opts]).join("\n");
+      var else_body;
+      if (self.node.else_body) {
+        var else_body = self.compileChildren.apply(self, ['else_body', opts]).join("\n");
+      }
+      var conditional = (new Node(self.node.condition)).compile(opts);
+      var ret = "if " + conditional + " {\n" + body;
+      if (self.node.else_body) {
+        ret += "\n" + indent(opts.indent) + "} else {\n" + else_body;
+      }
+      ret += "\n" + indent(opts.indent) + "}";
+      return ret;
     }
   },
 
   "Function": function (self) {
-    self.compile = function () {
+    self.compile = function (opts) {
       var func_name = self.node.name;
-      var args = self.node.arguments.map(function (argument) { var a = new Node(argument); return a.compile(); });
-      var fun_body = self.compileChildren('body');
-      fun_body += "if (typeof " + func_name + " !== 'undefined') { return " + func_name + "; }";
-      return "VBS['" + func_name + "'] = function (" + args.join(", ") + ") {\n" + fun_body + "}";
+      var args = self.node.arguments.map(function (argument) { var a = new Node(argument); return a.compile(opts); });
+      var fun_body = self.compileChildren('body', opts).join("\n");
+      if (self.node.sub_type == 'Function') {
+        fun_body += "\n" + indent(opts.indent + 1) + "if (typeof " + func_name + " !== 'undefined') { return " + func_name + "; }";
+      }
+      return "function " + func_name + " (" + args.join(", ") + ") {\n" + fun_body + "\n" + indent(opts.indent) + "}";
     }
     return self;
   },
 
   "Argument": function (self) {
-    self.compile = function () {
+    self.compile = function (opts) {
       return self.node.value.toString();
     }
     return self;
   },
 
   "Assignment": function (self) {
-    self.compile = function () {
-      return self.node.name + " = " + self.node.value + ";"
+    self.compile = function (opts) {
+      return self.node.name + " = " + self.node.value + ";";
+    }
+  },
+
+  "String": function (self) {
+    self.compile = function (opts) {
+      return self.node.value;
     }
   }
 };
 
-var prg = (new Node(ast)).compileChildren('body').join("\n");
+function indent(level) {
+  return (new Array(level+1).join("  "));
+}
+
+var prg = (new Node(ast)).compileChildren('body', {indent: 0}).join("\n");
+prg = "(function () {\n" + prg + "\n})();"; /* wrap everything in an anonymous function */
 //var prg = new Node(ast.body[1]).compile();
 console.log(prg);
 
 // The namespace
-var VBS = {};
 console.log(eval(prg));
