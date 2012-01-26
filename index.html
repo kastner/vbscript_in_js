@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VBScript in JS</title>
+  <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.4.0/bootstrap.min.css">
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script src="https://raw.github.com/kastner/vbscript_in_js/master/vbs4.js"></script>
+  <script src="compiler.js"></script>
+
+  <style type="text/css">
+    #try div {
+      margin: 10px 0;
+    }
+
+    #try select {
+      width: 540px;
+    }
+
+    #try textarea {
+      width: 540px;
+      height: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+        <h1>VBScript in Javascript... WTF?</h1>
+      </div>
+
+      <section id="about">
+        <p>I should have called this vbs.js or vbscript.js... oh well</p>
+      </section>
+
+      <section id="try">
+        <h2>Try it out!</h2>
+
+        <div>
+          <select id="prebaked">
+            <option>Type / paste your own or use one of the examples here</option>
+            <option value='test.vbs'>test.vbs - create and call a function</option>
+            <option value='test3.vbs'>test3.vbs - Sub with if/else/etc</option>
+          </select>
+        </div>
+
+        <div>
+          <textarea id='vbscript'></textarea>
+        </div>
+
+        <div>
+          <button class="btn" id="go">Compile</button>
+        </div>
+
+        <div>
+          <textarea id='javascript'></textarea>
+        </div>
+
+        <div>
+          <button class="btn" id="eval">Evaluate JS</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    $("#prebaked").live("change", function (evt) {
+      var selected = $("option:selected", this);
+      if (selected.val().match(/\.vbs$/)) {
+        $.get(selected.val(), function(script) {
+          $("#vbscript").val(script);
+        });
+      } else {
+        $("#vbscript").val("");
+      }
+    });
+
+    $("#go").live("click", function () {
+      $("#javascript").val(compiler.compile($("#vbscript").val(), vbs4));
+    });
+
+    $("#eval").live("click", function () {
+      alert(eval($("#javascript").val()));
+    })
+  </script>
+</body>
+</html>
