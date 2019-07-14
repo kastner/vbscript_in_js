@@ -39,7 +39,7 @@ This project is the result of me hacking around with that idea for the past few 
 When
 ----
 
-Seriously, calling this abondon-ware is being kind. This is a **hack**, pure-and-simple. If someone wanted to run with it, be my guest, but don't expect it to do anything useful in it's current state.
+Seriously, calling this abandon-ware is being kind. This is a **hack**, pure-and-simple. If someone wanted to run with it, be my guest, but don't expect it to do anything useful in it's current state.
 
 
 In a Perfect World
